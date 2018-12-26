@@ -3,7 +3,7 @@ import time
 import torch
 import numpy as np
 import torch.optim as optim
-
+from tqdm import tqdm
 # custom modules
 
 from loss import MonodepthLoss
@@ -15,6 +15,7 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 mpl.rcParams['figure.figsize'] = (15, 10)
 
+# 主程序,包括参数的定义,模型训练与测试等部分
 
 def return_arguments():
     parser = argparse.ArgumentParser(description='PyTorch Monodepth')
@@ -105,12 +106,16 @@ def adjust_learning_rate(optimizer, epoch, learning_rate):
     for param_group in optimizer.param_groups:
         param_group['lr'] = lr
 
-
+# 优秀的操作,保证视差图边缘的精准度
+# 水平翻转后的视差图,可以和原视差图相互融合补充,填补边缘处的残缺信息
 def post_process_disparity(disp):
+    # disp[0] 原左图对应的左视差图
+    # disp[1] 原左图水平翻转后对应的视差图
     (_, h, w) = disp.shape
     l_disp = disp[0, :, :]
     r_disp = np.fliplr(disp[1, :, :])
     m_disp = 0.5 * (l_disp + r_disp)
+    # 构造mask区域选择模式,分别在l_disp,r_disp,m_disp选择相应部分并综合.
     (l, _) = np.meshgrid(np.linspace(0, 1, w), np.linspace(0, 1, h))
     l_mask = 1.0 - np.clip(20 * (l - 0.05), 0, 1)
     r_mask = np.fliplr(l_mask)
@@ -159,6 +164,7 @@ class Model:
 
 
         if 'cuda' in self.device:
+            # cpu与gpu的时间同步
             torch.cuda.synchronize()
 
 
@@ -183,13 +189,14 @@ class Model:
         print('Val_loss:', running_val_loss)
 
         for epoch in range(self.args.epochs):
+            # 不同epoch状态更新学习率
             if self.args.adjust_lr:
                 adjust_learning_rate(self.optimizer, epoch,
                                      self.args.learning_rate)
             c_time = time.time()
             running_loss = 0.0
             self.model.train()
-            for data in self.loader:
+            for data in tqdm(self.loader):
                 # Load data
                 data = to_device(data, self.device)
                 left = data['left_image']
@@ -281,6 +288,9 @@ class Model:
         self.model.load_state_dict(torch.load(path))
 
     def test(self):
+        # 两个结果
+        # disparities 原左图对应的左视差图
+        # disparities_pp 通过post_process操作的视差图
         self.model.eval()
         disparities = np.zeros((self.n_img,
                                self.input_height, self.input_width),

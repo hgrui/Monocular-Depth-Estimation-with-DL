@@ -60,6 +60,7 @@ class MonodepthLoss(nn.modules.Module):
         # 单通道的视差图 N*H*W
         x_shifts = disp[:, 0, :, :]  # Disparity is passed in NCHW format with 1 channel
         # flow_field, grid_sample  为什么要这样计算？没懂
+        # backward mapping 的方法,需要利用双线性插值的方法对非像素点的位置进行估计.
         flow_field = torch.stack((x_base + x_shifts, y_base), dim=3)
         # In grid_sample coordinates are assumed to be between -1 and 1
         output = F.grid_sample(img, 2*flow_field - 1, mode='bilinear',
@@ -148,6 +149,7 @@ class MonodepthLoss(nn.modules.Module):
         self.disp_right_est = disp_right_est
         # Generate images
         # 根据右/左原图和左/右视差图生成左/右重建估计图
+        # backward/inverse mapping, 所以重建左估计图时,需要左视差图和右原图.
         left_est = [self.generate_image_left(right_pyramid[i],
                     disp_left_est[i]) for i in range(self.n)]
         right_est = [self.generate_image_right(left_pyramid[i],
@@ -156,25 +158,28 @@ class MonodepthLoss(nn.modules.Module):
         self.right_est = right_est
 
         # L-R Consistency
-
+        # 在右(左)视差图基础上根据左(右)视差图处理,得到左(右)估计视差图
         right_left_disp = [self.generate_image_left(disp_right_est[i],
                            disp_left_est[i]) for i in range(self.n)]
         left_right_disp = [self.generate_image_right(disp_left_est[i],
                            disp_right_est[i]) for i in range(self.n)]
 
         # Disparities smoothness
+        # 视差图的平滑度误差
         disp_left_smoothness = self.disp_smoothness(disp_left_est,
                                                     left_pyramid)
         disp_right_smoothness = self.disp_smoothness(disp_right_est,
                                                      right_pyramid)
 
         # L1
+        # 基于视差重建图像和原图像的L1范数误差
         l1_left = [torch.mean(torch.abs(left_est[i] - left_pyramid[i]))
                    for i in range(self.n)]
         l1_right = [torch.mean(torch.abs(right_est[i]
                     - right_pyramid[i])) for i in range(self.n)]
 
         # SSIM
+        # 基于视差重建图和原图像的SSIM误差
         ssim_left = [torch.mean(self.SSIM(left_est[i],
                      left_pyramid[i])) for i in range(self.n)]
         ssim_right = [torch.mean(self.SSIM(right_est[i],
@@ -189,6 +194,7 @@ class MonodepthLoss(nn.modules.Module):
         image_loss = sum(image_loss_left + image_loss_right)
 
         # L-R Consistency
+        # 左右视差图一致性误差,根据左视差图可以将右视差图转换为左视差图
         lr_left_loss = [torch.mean(torch.abs(right_left_disp[i]
                         - disp_left_est[i])) for i in range(self.n)]
         lr_right_loss = [torch.mean(torch.abs(left_right_disp[i]
@@ -196,6 +202,7 @@ class MonodepthLoss(nn.modules.Module):
         lr_loss = sum(lr_left_loss + lr_right_loss)
 
         # Disparities smoothness
+        # 考虑Depth不连续的情况发生在边缘附近,这里保证深度图的平滑性与原图像的梯度一致.
         disp_left_loss = [torch.mean(torch.abs(
                           disp_left_smoothness[i])) / 2 ** i
                           for i in range(self.n)]
@@ -204,6 +211,7 @@ class MonodepthLoss(nn.modules.Module):
                            for i in range(self.n)]
         disp_gradient_loss = sum(disp_left_loss + disp_right_loss)
 
+        # 对不同的损失函数考虑相应的权重,这里的话权重值均为1.
         loss = image_loss + self.disp_gradient_w * disp_gradient_loss\
                + self.lr_w * lr_loss
         self.image_loss = image_loss

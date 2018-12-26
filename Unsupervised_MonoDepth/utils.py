@@ -2,11 +2,20 @@ import torch
 import collections
 import os
 from torch.utils.data import DataLoader, ConcatDataset
-
-
 from models_resnet import Resnet18_md, Resnet50_md, ResnetModel
 from data_loader import KittiLoader
 from transforms import image_transforms
+# 本模块主要包括三个函数
+
+# def to_device(input,device).
+# 考虑input的类型,将其赋予为的device类型. cpu/cuda:'0'/cuda:'1'/...
+
+# def get_model(model,input_channels,pretrained)
+# 选择合适的模型,提供了自定义的resnet_18,resnet_50和动态导入的resnet_
+
+# def prepare_dataloader(data_directory, mode, augment_parameters,
+#                        do_augmentation, batch_size, size, num_workers)
+# 数据生成器,包括用于kitti数据集的KittiLoader().
 
 def to_device(input, device):
     if torch.is_tensor(input):
@@ -42,6 +51,7 @@ def prepare_dataloader(data_directory, mode, augment_parameters,
     datasets = [KittiLoader(os.path.join(data_directory,
                             data_dir), mode, transform=data_transform)
                             for data_dir in data_dirs]
+    # 考虑datasets是多个数据loader组成的list,通过ConcatDataset对其进行合并成一个整合loader
     dataset = ConcatDataset(datasets)
     n_img = len(dataset)
     print('Use a dataset with', n_img, 'images')

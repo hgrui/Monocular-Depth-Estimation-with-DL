@@ -2,11 +2,16 @@ import torch
 import torchvision.transforms as transforms
 import numpy as np
 
-
+# 图像数据增强部分
+# 针对train和test数据采用不同的transform方式
 
 def image_transforms(mode='train', augment_parameters=[0.8, 1.2, 0.5, 2.0, 0.8, 1.2],
                      do_augmentation=True, transformations=None,  size=(256, 512)):
     if mode == 'train':
+        # ResizeImage(), 图像尺寸调整, default=(256,512)
+        # RandomFlip(), 50%概率对左右图像同时进行水平翻转
+        # ToTensor(), 将图像数据转换成torch使用的tensor格式
+        # AugmentImagePair(), 在gamma, brightness, color三方面对图像数据做增强处理
         data_transform = transforms.Compose([
             ResizeImage(train=True, size=size),
             RandomFlip(do_augmentation),
@@ -15,6 +20,9 @@ def image_transforms(mode='train', augment_parameters=[0.8, 1.2, 0.5, 2.0, 0.8, 
         ])
         return data_transform
     elif mode == 'test':
+        # ResizeImage(), 图像尺寸调整, default=(256,512)
+        # ToTensor(), 将图像数据转换成torch使用的tensor格式
+        # DoTest(), 对原图进行水平翻转后加入测试数据,结果数据用于post_processing操作
         data_transform = transforms.Compose([
             ResizeImage(train=False, size=size),
             ToTensor(train=False),

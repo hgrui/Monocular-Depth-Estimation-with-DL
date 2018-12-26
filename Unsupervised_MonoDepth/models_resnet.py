@@ -9,6 +9,7 @@ import importlib
 # 论文提到了分别把vgg和resnet为base网络,其中resnet效果略优于vgg
 # 本实现集中为resnet-18/50
 
+# 先定义实现了conv, convblock, maxpool, resconv, resconv_basic, upconv, get_disp等基本组件
 class conv(nn.Module):
     def __init__(self, num_in_layers, num_out_layers, kernel_size, stride):
         super(conv, self).__init__()
@@ -19,6 +20,7 @@ class conv(nn.Module):
     def forward(self, x):
         p = int(np.floor((self.kernel_size-1)/2))
         p2d = (p, p, p, p)
+        # padding for keeping size of 'x'
         x = self.conv_base(F.pad(x, p2d))
         x = self.normalize(x)
         return F.elu(x, inplace=True)
@@ -88,6 +90,7 @@ class resconv_basic(nn.Module):
         x_out = self.conv1(x)
         x_out = self.conv2(x_out)
         if do_proj:
+            # kernel_size = 1
             shortcut = self.conv3(x)
         else:
             shortcut = x
@@ -123,6 +126,8 @@ class upconv(nn.Module):
 
 
 class get_disp(nn.Module):
+    # disp为两通道数据,disp[0]为左视差图,disp[1]为右视差图
+    # 最终的视差图用sigmoid进行非线性尺度放缩到0-0.3范围内
     def __init__(self, num_in_layers):
         super(get_disp, self).__init__()
         self.conv1 = nn.Conv2d(num_in_layers, 2, kernel_size=3, stride=1)

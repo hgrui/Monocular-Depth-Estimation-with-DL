@@ -2,7 +2,8 @@ import os
 from PIL import Image
 
 from torch.utils.data import Dataset
-
+# 在实现dataloader时,考虑的是不能够一口气把所有数据读到内存中,这样在大数据集下对硬件要求很高.
+# 因此采用pytorch自带的Dataset, DataLoader, ConcatDataset来实现一个有效的数据生成器
 
 class KittiLoader(Dataset):
     def __init__(self, root_dir, mode, transform=None):
