@@ -11,8 +11,8 @@
 争取早日告别小白阶段！:blush:
  
 ### Lists
- - Unsupervised Monocular Depth Estimation with Left-Right Consistency [DONE]
- - Unsupervised Learning of Depth and Ego-Motion from Video [DOING]
- - Learning Depth with Convolutional Spatial Propagation Network[DOING]
+ - [Unsupervised Monocular Depth Estimation with Left-Right Consistency](https://github.com/ClubAI/MonoDepth-PyTorch) [DONE]
+ - [Unsupervised Learning of Depth and Ego-Motion from Video](https://github.com/ClementPinard/SfmLearner-Pytorch) [DOING]
+ - [Learning Depth with Convolutional Spatial Propagation Network](https://github.com/XinJCheng/CSPN) [DOING]
 
     Time to unleash your brillance
