@@ -3,7 +3,7 @@ import collections
 import os
 from torch.utils.data import DataLoader, ConcatDataset
 from models_resnet import Resnet18_md, Resnet50_md, ResnetModel
-from data_loader import KittiLoader
+from data_loader import KittiLoader,KittiLoader_Eigen
 from transforms import image_transforms
 # 本模块主要包括三个函数
 
@@ -41,20 +41,29 @@ def get_model(model, input_channels=3, pretrained=False):
 
 
 def prepare_dataloader(data_directory, mode, augment_parameters,
-                       do_augmentation, batch_size, size, num_workers):
+                       do_augmentation, batch_size, size, num_workers,split,filename):
     data_dirs = os.listdir(data_directory)
     data_transform = image_transforms(
         mode=mode,
         augment_parameters=augment_parameters,
         do_augmentation=do_augmentation,
         size = size)
-    datasets = [KittiLoader(os.path.join(data_directory,
-                            data_dir), mode, transform=data_transform)
-                            for data_dir in data_dirs]
-    # 考虑datasets是多个数据loader组成的list,通过ConcatDataset对其进行合并成一个整合loader
-    dataset = ConcatDataset(datasets)
-    n_img = len(dataset)
-    print('Use a dataset with', n_img, 'images')
+    if split=='kitti':
+        datasets = [KittiLoader(os.path.join(data_directory,
+                                data_dir), mode, transform=data_transform)
+                                for data_dir in data_dirs]
+        # 考虑datasets是多个数据loader组成的list,通过ConcatDataset对其进行合并成一个整合loader
+        dataset = ConcatDataset(datasets)
+        n_img = len(dataset)
+        print('KITTI: Use a dataset with', n_img, 'images')
+    elif split=='eigen':
+        dataset = KittiLoader_Eigen(root_dir=data_directory,root_filename = filename,
+                                    mode = mode,transform=data_transform)
+        n_img = len(dataset)
+        print('EIGEN: Use a dataset with', n_img, 'images')
+    else:
+        print('Wrong split')
+        pass
     if mode == 'train':
         loader = DataLoader(dataset, batch_size=batch_size,
                             shuffle=True, num_workers=num_workers,

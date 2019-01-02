@@ -32,7 +32,13 @@ def return_arguments():
                             "image_02/data" for left images and \
                             "image_03/data" for right images'
                         )
+    parser.add_argument('data_filename', help = 'contain the list of train images for eigen split mode')
+    parser.add_argument('val_data_filename', help = 'contain the list of valid images for eigen split mode')
+
+    parser.add_argument('--split', default='kitti',help='the split mode of datasets: kitti or eigen')
+
     parser.add_argument('model_path', help='path to the trained model')
+    parser.add_argument('half_model_path', help='path to the trained model')
     parser.add_argument('output_directory',
                         help='where save dispairities\
                         for tested images'
@@ -89,6 +95,7 @@ def return_arguments():
     parser.add_argument('--num_workers', default=4,
                         help='Number of workers in dataloader')
     parser.add_argument('--use_multiple_gpu', default=False)
+    parser.add_argument('--half_trained', default=False)
     args = parser.parse_args()
     return args
 
@@ -145,7 +152,14 @@ class Model:
                                                                  args.augment_parameters,
                                                                  False, args.batch_size,
                                                                  (args.input_height, args.input_width),
-                                                                 args.num_workers)
+                                                                 args.num_workers,
+                                                                 args.split,
+                                                                 args.val_data_filename
+                                                                 )
+            if args.half_trained:
+                pre_net = torch.load(args.half_model_path)
+                self.model.load_state_dict(pre_net, strict=False)
+
         else:
             self.model.load_state_dict(torch.load(args.model_path))
             args.augment_parameters = None
@@ -160,7 +174,9 @@ class Model:
         self.n_img, self.loader = prepare_dataloader(args.data_dir, args.mode, args.augment_parameters,
                                                      args.do_augmentation, args.batch_size,
                                                      (args.input_height, args.input_width),
-                                                     args.num_workers)
+                                                     args.num_workers,
+                                                     args.split,
+                                                     args.data_filename)
 
 
         if 'cuda' in self.device:
@@ -176,7 +192,7 @@ class Model:
 
         running_val_loss = 0.0
         self.model.eval()
-        for data in self.val_loader:
+        for data in tqdm(self.val_loader):
             data = to_device(data, self.device)
             left = data['left_image']
             right = data['right_image']
@@ -249,7 +265,7 @@ class Model:
 
             running_val_loss = 0.0
             self.model.eval()
-            for data in self.val_loader:
+            for data in tqdm(self.val_loader):
                 data = to_device(data, self.device)
                 left = data['left_image']
                 right = data['right_image']

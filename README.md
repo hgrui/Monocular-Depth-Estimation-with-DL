@@ -11,7 +11,8 @@
 争取早日告别小白阶段！:blush:
  
 ### Lists
- - Unsupervised Monocular Depth Estimation with Left-Right Consistency (now - 2018/12/31)
- -
+ - Unsupervised Monocular Depth Estimation with Left-Right Consistency [DONE]
+ - Unsupervised Learning of Depth and Ego-Motion from Video [DOING]
+ - Learning Depth with Convolutional Spatial Propagation Network[DOING]
 
     Time to unleash your brillance
